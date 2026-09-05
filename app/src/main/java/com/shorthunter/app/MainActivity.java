@@ -20,7 +20,7 @@ import java.util.concurrent.Executors;
 
 public class MainActivity extends Activity {
     private WebView webView;
-    private final ExecutorService executor = Executors.newFixedThreadPool(4);
+    private final ExecutorService executor = Executors.newFixedThreadPool(6);
 
     @Override public void onCreate(Bundle b) {
         super.onCreate(b);
@@ -36,38 +36,50 @@ public class MainActivity extends Activity {
     }
 
     public class MarketBridge {
-        @JavascriptInterface
-        public void get(final String requestId, final String url) {
+        @JavascriptInterface public void get(final String requestId, final String url) {
             executor.execute(() -> {
                 String result;
-                try {
-                    result = httpGet(url);
-                } catch (Exception e) {
-                    result = "__ERROR__" + e.getClass().getSimpleName() + ": " + e.getMessage();
-                }
+                try { result = httpGetWithRetry(url, 3); }
+                catch (Exception e) { result = "__ERROR__" + e.getClass().getSimpleName() + ": " + e.getMessage(); }
                 final String js = "window.__nativeResult(" + JSONObject.quote(requestId) + "," + JSONObject.quote(result) + ");";
                 runOnUiThread(() -> webView.evaluateJavascript(js, null));
             });
         }
     }
 
+    private String httpGetWithRetry(String target, int attempts) throws Exception {
+        Exception last = null;
+        for (int i=0;i<attempts;i++) {
+            try { return httpGet(target); }
+            catch (Exception e) {
+                last = e;
+                try { Thread.sleep(450L * (i + 1)); } catch (InterruptedException ignored) {}
+            }
+        }
+        throw last != null ? last : new RuntimeException("请求失败");
+    }
+
     private String httpGet(String target) throws Exception {
         HttpURLConnection conn = (HttpURLConnection) new URL(target).openConnection();
         conn.setRequestMethod("GET");
-        conn.setConnectTimeout(10000);
+        conn.setConnectTimeout(9000);
         conn.setReadTimeout(12000);
-        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android) ShortHunter/2.0");
+        conn.setUseCaches(false);
+        conn.setRequestProperty("User-Agent", "Mozilla/5.0 (Linux; Android 16) AppleWebKit/537.36 Chrome/131 Mobile Safari/537.36 ShortHunter/3.0");
         conn.setRequestProperty("Accept", "application/json,text/plain,*/*");
+        conn.setRequestProperty("Accept-Encoding", "identity");
+        conn.setRequestProperty("Connection", "close");
+        conn.setRequestProperty("Referer", "https://quote.eastmoney.com/");
         int code = conn.getResponseCode();
         InputStream in = code >= 200 && code < 400 ? conn.getInputStream() : conn.getErrorStream();
-        if (in == null) throw new RuntimeException("HTTP " + code);
+        if (in == null) { conn.disconnect(); throw new RuntimeException("HTTP " + code); }
         BufferedReader reader = new BufferedReader(new InputStreamReader(in, StandardCharsets.UTF_8));
         StringBuilder sb = new StringBuilder();
         String line;
         while ((line = reader.readLine()) != null) sb.append(line);
-        reader.close();
-        conn.disconnect();
-        if (code < 200 || code >= 400) throw new RuntimeException("HTTP " + code + " " + sb);
+        reader.close(); conn.disconnect();
+        if (code < 200 || code >= 400) throw new RuntimeException("HTTP " + code);
+        if (sb.length() == 0) throw new RuntimeException("服务器返回空数据");
         return sb.toString();
     }
 
