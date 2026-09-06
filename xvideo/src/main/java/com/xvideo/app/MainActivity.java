@@ -2,10 +2,16 @@ package com.xvideo.app;
 
 import android.app.Activity;
 import android.graphics.Color;
+import android.net.Uri;
 import android.os.Build;
 import android.os.Bundle;
+import android.view.Gravity;
 import android.view.View;
 import android.view.WindowInsets;
+import android.view.inputmethod.EditorInfo;
+import android.widget.Button;
+import android.widget.EditText;
+import android.widget.LinearLayout;
 import android.webkit.CookieManager;
 import android.webkit.WebChromeClient;
 import android.webkit.WebSettings;
@@ -14,6 +20,7 @@ import android.webkit.WebViewClient;
 
 public class MainActivity extends Activity {
     private WebView webView;
+    private EditText searchBox;
 
     private static final String FILTER_JS = "javascript:(function(){" +
         "if(window.__xv3)return;window.__xv3=1;" +
@@ -43,16 +50,70 @@ public class MainActivity extends Activity {
         "var b=document.createElement('button');b.id='xv-sound';b.textContent='🔇';b.onclick=function(){var v=[].slice.call(document.querySelectorAll('video')).find(function(x){var r=x.getBoundingClientRect();return r.top<innerHeight*.65&&r.bottom>innerHeight*.35;});if(v){v.muted=!v.muted;b.textContent=v.muted?'🔇':'🔊';}};document.body.appendChild(b);" +
         "})();";
 
+    private int dp(int value) {
+        return (int)(value * getResources().getDisplayMetrics().density + 0.5f);
+    }
+
+    private void runSearch() {
+        String q = searchBox.getText().toString().trim();
+        if (q.isEmpty()) return;
+        String url = "https://x.com/search?q=" + Uri.encode(q) + "&src=typed_query&f=live";
+        webView.loadUrl(url);
+        searchBox.clearFocus();
+    }
+
     @Override public void onCreate(Bundle b){
         super.onCreate(b);
         getWindow().setStatusBarColor(Color.BLACK);
         getWindow().setNavigationBarColor(Color.BLACK);
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) getWindow().getDecorView().setSystemUiVisibility(0);
 
+        LinearLayout root = new LinearLayout(this);
+        root.setOrientation(LinearLayout.VERTICAL);
+        root.setBackgroundColor(Color.BLACK);
+        root.setFitsSystemWindows(false);
+
+        LinearLayout searchRow = new LinearLayout(this);
+        searchRow.setOrientation(LinearLayout.HORIZONTAL);
+        searchRow.setGravity(Gravity.CENTER_VERTICAL);
+        searchRow.setPadding(dp(8), dp(6), dp(8), dp(6));
+        searchRow.setBackgroundColor(Color.rgb(16,16,16));
+
+        searchBox = new EditText(this);
+        searchBox.setSingleLine(true);
+        searchBox.setTextColor(Color.WHITE);
+        searchBox.setHintTextColor(Color.GRAY);
+        searchBox.setHint("搜索 X 视频");
+        searchBox.setTextSize(16f);
+        searchBox.setImeOptions(EditorInfo.IME_ACTION_SEARCH);
+        searchBox.setPadding(dp(12), 0, dp(12), 0);
+        LinearLayout.LayoutParams searchLp = new LinearLayout.LayoutParams(0, dp(44), 1f);
+        searchRow.addView(searchBox, searchLp);
+
+        Button searchBtn = new Button(this);
+        searchBtn.setText("搜索");
+        searchBtn.setTextSize(14f);
+        searchBtn.setOnClickListener(v -> runSearch());
+        searchRow.addView(searchBtn, new LinearLayout.LayoutParams(dp(72), dp(44)));
+
+        Button homeBtn = new Button(this);
+        homeBtn.setText("首页");
+        homeBtn.setTextSize(14f);
+        homeBtn.setOnClickListener(v -> { searchBox.setText(""); webView.loadUrl("https://x.com/home"); });
+        searchRow.addView(homeBtn, new LinearLayout.LayoutParams(dp(72), dp(44)));
+
+        searchBox.setOnEditorActionListener((v, actionId, event) -> {
+            if (actionId == EditorInfo.IME_ACTION_SEARCH) { runSearch(); return true; }
+            return false;
+        });
+
         webView=new WebView(this);
         webView.setBackgroundColor(Color.BLACK);
         webView.setFitsSystemWindows(false);
-        webView.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
+        root.addView(searchRow, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, dp(56)));
+        root.addView(webView, new LinearLayout.LayoutParams(LinearLayout.LayoutParams.MATCH_PARENT, 0, 1f));
+
+        root.setOnApplyWindowInsetsListener(new View.OnApplyWindowInsetsListener() {
             @Override public WindowInsets onApplyWindowInsets(View v, WindowInsets insets) {
                 int left, top, right, bottom;
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
@@ -65,8 +126,8 @@ public class MainActivity extends Activity {
                 return insets;
             }
         });
-        setContentView(webView);
-        webView.requestApplyInsets();
+        setContentView(root);
+        root.requestApplyInsets();
 
         WebSettings s=webView.getSettings();
         s.setJavaScriptEnabled(true); s.setDomStorageEnabled(true); s.setMediaPlaybackRequiresUserGesture(false);
@@ -77,5 +138,9 @@ public class MainActivity extends Activity {
         webView.setWebViewClient(new WebViewClient(){@Override public void onPageFinished(WebView v,String u){super.onPageFinished(v,u);v.evaluateJavascript(FILTER_JS,null);}});
         webView.loadUrl("https://x.com/home");
     }
-    @Override public void onBackPressed(){if(webView!=null&&webView.canGoBack())webView.goBack();else super.onBackPressed();}
+
+    @Override public void onBackPressed(){
+        if(webView!=null&&webView.canGoBack()) webView.goBack();
+        else super.onBackPressed();
+    }
 }
