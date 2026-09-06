@@ -16,25 +16,30 @@ public class MainActivity extends Activity {
     private WebView webView;
 
     private static final String FILTER_JS = "javascript:(function(){" +
-        "if(window.__xv2)return;window.__xv2=1;" +
+        "if(window.__xv3)return;window.__xv3=1;" +
         "var st=document.createElement('style');st.id='xv-style';st.textContent=`" +
-        "html,body{background:#000!important;overscroll-behavior:none!important;}" +
-        "header,[data-testid=\\\"BottomBar\\\"],[data-testid=\\\"sidebarColumn\\\"],[data-testid=\\\"SideNav_NewTweet_Button\\\"],[data-testid=\\\"FloatingActionButtons_Tweet_Button\\\"],nav[role=\\\"navigation\\\"]{display:none!important;}" +
-        "main{width:100%!important;max-width:none!important;margin:0!important;}" +
-        "main>div,main>div>div,section{max-width:none!important;width:100%!important;}" +
-        "article[data-testid=\\\"tweet\\\"]{box-sizing:border-box!important;width:100vw!important;height:100dvh!important;min-height:100dvh!important;margin:0!important;padding:0!important;border:0!important;background:#000!important;overflow:hidden!important;scroll-snap-align:start!important;position:relative!important;}" +
-        "article[data-testid=\\\"tweet\\\"]>div{height:100%!important;padding:0!important;}" +
-        "article[data-testid=\\\"tweet\\\"] [data-testid=\\\"tweetText\\\"],article[data-testid=\\\"tweet\\\"] [data-testid=\\\"User-Name\\\"],article[data-testid=\\\"tweet\\\"] [role=\\\"group\\\"]{display:none!important;}" +
-        "article[data-testid=\\\"tweet\\\"] video{position:absolute!important;inset:0!important;width:100vw!important;height:100dvh!important;max-height:none!important;object-fit:contain!important;background:#000!important;}" +
-        "article[data-testid=\\\"tweet\\\"] [data-testid=\\\"videoPlayer\\\"],article[data-testid=\\\"tweet\\\"] [data-testid=\\\"videoComponent\\\"]{position:absolute!important;inset:0!important;width:100vw!important;height:100dvh!important;max-height:none!important;background:#000!important;}" +
-        "article[data-testid=\\\"tweet\\\"] [data-testid=\\\"videoPlayer\\\"]>div,article[data-testid=\\\"tweet\\\"] [data-testid=\\\"videoComponent\\\"]>div{height:100%!important;max-height:none!important;}" +
-        "#xv-sound{position:fixed;right:18px;bottom:28px;z-index:2147483647;width:52px;height:52px;border-radius:50%;border:0;background:rgba(20,20,20,.72);color:white;font-size:23px;}" +
+        "html,body{margin:0!important;padding:0!important;background:#000!important;overscroll-behavior:none!important;}" +
+        "body{overflow-x:hidden!important;}" +
+        "[data-testid=\\\"TopNavBar\\\"],[data-testid=\\\"BottomBar\\\"],[data-testid=\\\"sidebarColumn\\\"],[data-testid=\\\"SideNav_NewTweet_Button\\\"],[data-testid=\\\"FloatingActionButtons_Tweet_Button\\\"],nav[role=\\\"navigation\\\"]{display:none!important;}" +
+        "main,main>div,main>div>div,section{width:100%!important;max-width:none!important;margin:0!important;padding:0!important;}" +
+        "article[data-testid=\\\"tweet\\\"]{box-sizing:border-box!important;width:100vw!important;height:100dvh!important;min-height:100dvh!important;max-height:100dvh!important;margin:0!important;padding:0!important;border:0!important;background:#000!important;overflow:hidden!important;scroll-snap-align:start!important;position:relative!important;}" +
+        "article[data-testid=\\\"tweet\\\"] video{display:block!important;position:absolute!important;inset:0!important;width:100vw!important;height:100dvh!important;min-width:100vw!important;min-height:100dvh!important;max-width:none!important;max-height:none!important;margin:0!important;padding:0!important;object-fit:contain!important;background:#000!important;z-index:10!important;}" +
+        "#xv-sound{position:fixed;right:18px;bottom:28px;z-index:2147483647;width:54px;height:54px;border-radius:50%;border:0;background:rgba(20,20,20,.72);color:#fff;font-size:24px;}" +
         "`;document.head.appendChild(st);" +
+        "function normalizeArticle(a){" +
+          "var v=a.querySelector('video');if(!v)return false;" +
+          "a.style.display='block';" +
+          "var r=a.getBoundingClientRect();a.style.transform='translateX('+(-r.left)+'px)';a.style.width=innerWidth+'px';" +
+          "var n=v;while(n&&n!==a){n.style.setProperty('position','static','important');n.style.setProperty('width','100%','important');n.style.setProperty('height','100%','important');n.style.setProperty('max-width','none','important');n.style.setProperty('max-height','none','important');n.style.setProperty('margin','0','important');n.style.setProperty('padding','0','important');n=n.parentElement;}" +
+          "function prune(parent){Array.from(parent.children).forEach(function(c){if(c===v||c.contains(v)){c.style.setProperty('display','block','important');if(c!==v)prune(c);}else{c.style.setProperty('display','none','important');}});}prune(a);" +
+          "v.controls=false;return true;" +
+        "}" +
+        "function hideChrome(){document.querySelectorAll('body *').forEach(function(el){if(el.id==='xv-sound'||el.closest&&el.closest('article[data-testid=\\\"tweet\\\"]'))return;var p=getComputedStyle(el).position;if(p==='fixed'||p==='sticky'){el.style.setProperty('display','none','important');}});}" +
         "function scroller(){var a=document.querySelector('article[data-testid=\\\"tweet\\\"]');if(!a)return;var p=a.parentElement;while(p&&p!==document.body){var cs=getComputedStyle(p);if((cs.overflowY==='auto'||cs.overflowY==='scroll')&&p.scrollHeight>p.clientHeight){p.style.scrollSnapType='y mandatory';p.style.overscrollBehavior='none';return;}p=p.parentElement;}document.documentElement.style.scrollSnapType='y mandatory';}" +
-        "function process(){document.querySelectorAll('article[data-testid=\\\"tweet\\\"]').forEach(function(a){var has=a.querySelector('video,[data-testid=\\\"videoPlayer\\\"],[data-testid=\\\"videoComponent\\\"]');a.style.display=has?'block':'none';});scroller();}" +
+        "function process(){document.querySelectorAll('article[data-testid=\\\"tweet\\\"]').forEach(function(a){var has=a.querySelector('video');if(has){normalizeArticle(a);}else{a.style.setProperty('display','none','important');}});hideChrome();scroller();}" +
         "var io=new IntersectionObserver(function(es){es.forEach(function(e){var v=e.target.querySelector('video');if(!v)return;if(e.isIntersecting&&e.intersectionRatio>=.55){document.querySelectorAll('video').forEach(function(o){if(o!==v)o.pause();});v.muted=true;v.play().catch(function(){});}else v.pause();});},{threshold:[0,.55,1]});" +
         "function bind(){document.querySelectorAll('article[data-testid=\\\"tweet\\\"]').forEach(function(a){if(!a.dataset.xv){a.dataset.xv='1';io.observe(a);}});process();}" +
-        "new MutationObserver(function(){bind();}).observe(document.body,{childList:true,subtree:true});setInterval(bind,900);bind();" +
+        "new MutationObserver(function(){bind();}).observe(document.body,{childList:true,subtree:true});setInterval(bind,900);window.addEventListener('resize',process);bind();" +
         "var b=document.createElement('button');b.id='xv-sound';b.textContent='🔇';b.onclick=function(){var v=[].slice.call(document.querySelectorAll('video')).find(function(x){var r=x.getBoundingClientRect();return r.top<innerHeight*.65&&r.bottom>innerHeight*.35;});if(v){v.muted=!v.muted;b.textContent=v.muted?'🔇':'🔊';}};document.body.appendChild(b);" +
         "})();";
 
@@ -42,9 +47,7 @@ public class MainActivity extends Activity {
         super.onCreate(b);
         getWindow().setStatusBarColor(Color.BLACK);
         getWindow().setNavigationBarColor(Color.BLACK);
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) {
-            getWindow().getDecorView().setSystemUiVisibility(0);
-        }
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.M) getWindow().getDecorView().setSystemUiVisibility(0);
 
         webView=new WebView(this);
         webView.setBackgroundColor(Color.BLACK);
@@ -54,14 +57,11 @@ public class MainActivity extends Activity {
                 int left, top, right, bottom;
                 if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.R) {
                     android.graphics.Insets sys = insets.getInsets(WindowInsets.Type.systemBars());
-                    left = sys.left; top = sys.top; right = sys.right; bottom = sys.bottom;
+                    left=sys.left; top=sys.top; right=sys.right; bottom=sys.bottom;
                 } else {
-                    left = insets.getSystemWindowInsetLeft();
-                    top = insets.getSystemWindowInsetTop();
-                    right = insets.getSystemWindowInsetRight();
-                    bottom = insets.getSystemWindowInsetBottom();
+                    left=insets.getSystemWindowInsetLeft(); top=insets.getSystemWindowInsetTop(); right=insets.getSystemWindowInsetRight(); bottom=insets.getSystemWindowInsetBottom();
                 }
-                v.setPadding(left, top, right, bottom);
+                v.setPadding(left,top,right,bottom);
                 return insets;
             }
         });
